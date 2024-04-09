@@ -5,6 +5,8 @@ import os
 import requests
 from dotenv import load_dotenv
 import time
+import pandas as pd
+from flask import jsonify
 
 load_dotenv()
 
@@ -42,7 +44,31 @@ def get_favorite_tracks():
         print('User not logged in')
         return redirect('/')
     
-    return('deu certo')
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    
+    track_ids = []
+    
+    #Pega as primeiras 50 músicas
+    top_tracks_1 = sp.current_user_top_tracks(limit=50, time_range='short_term')['items']
+    track_ids += [track['id'] for track in top_tracks_1]
+    
+    #Se ja tiverem 50 músicas, pega as outras 50 para completar 100
+    if len(top_tracks_1) == 50:
+        top_tracks_2 = sp.current_user_top_tracks(limit=50, offset=50, time_range='short_term')['items']
+        track_ids += [track['id'] for track in top_tracks_2]
+    
+    top_tracks = top_tracks_1 + top_tracks_2
+        
+    audio_features = sp.audio_features(track_ids)
+    
+    # Create a DataFrame from the audio features
+    df = pd.DataFrame(audio_features)
+    df['track_name'] = [track['name'] for track in top_tracks['items']]
+    df['track_artist'] = [track['artists'][0]['name'] for track in top_tracks]
+    
+    return "Faixas obtidas e analisadas. Use /AnalysisResult para ver a análise."
+
+   
 
 
 def get_token():
