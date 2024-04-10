@@ -58,19 +58,34 @@ def get_favorite_tracks():
         track_ids += [track['id'] for track in top_tracks_2]
     
     top_tracks = top_tracks_1 + top_tracks_2
-        
+    
+    
     audio_features = sp.audio_features(track_ids)
     
     # Create a DataFrame from the audio features
     df = pd.DataFrame(audio_features)
-    df['track_name'] = [track['name'] for track in top_tracks['items']]
+    df['track_name'] = [track['name'] for track in top_tracks]
     df['track_artist'] = [track['artists'][0]['name'] for track in top_tracks]
+    top_artists_names = df['track_artist'].value_counts().head(5)
     
-    return "Faixas obtidas e analisadas. Use /AnalysisResult para ver a análise."
+    top_artists_info = []
+    for artist_name in top_artists_names:
+        results = sp.search(q=  artist_name, type='artist', limit=1)
+        if results['artists']['items']:
+            artist = results['artists']['items'][0]
+            # Extract the URL of the first image for the artist, if available
+            image_url = artist['images'][0]['url'] if artist['images'] else None
+            top_artists_info.append({'artist_name': artist_name, 'image_url': image_url})
+
+    # Create a DataFrame from the top artists info
+    top_artists_df = pd.DataFrame(top_artists_info)
+        
+    # Sai da função top_artists_df, top_artists_names e df com as informações
+    
+    return "Faixas obtidas e analisadas."
 
    
-
-
+   
 def get_token():
     token_info = session.get(TOKEN_INFO,None)
     if not token_info:
