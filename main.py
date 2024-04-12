@@ -14,7 +14,7 @@ client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
 
 app = Flask(__name__)
-
+ 
 app.config['SESSION_COOKIE_NAME'] = 'Spotify Cookie'
 app.secret_key = 'gadiaf76578bfa*5bfaf*'
 TOKEN_INFO = 'token_info'
@@ -64,12 +64,15 @@ def get_favorite_tracks():
     
     # Create a DataFrame from the audio features
     df = pd.DataFrame(audio_features)
+    
+    
     df['track_name'] = [track['name'] for track in top_tracks]
     df['track_artist'] = [track['artists'][0]['name'] for track in top_tracks]
     top_artists_names = df['track_artist'].value_counts().head(5)
     
     top_artists_info = []
-    for artist_name in top_artists_names:
+    for artist_name, count in top_artists_names.items():
+        print(artist_name)
         results = sp.search(q=  artist_name, type='artist', limit=1)
         if results['artists']['items']:
             artist = results['artists']['items'][0]
@@ -79,8 +82,14 @@ def get_favorite_tracks():
 
     # Create a DataFrame from the top artists info
     top_artists_df = pd.DataFrame(top_artists_info)
+    print(top_artists_df)
         
     # Sai da função top_artists_df, top_artists_names e df com as informações
+    
+    df.to_csv('df.csv', index=False)
+
+    # For the top artists DataFrame
+    top_artists_df.to_csv('top_artist.csv', index=False)
     
     return "Faixas obtidas e analisadas."
 
