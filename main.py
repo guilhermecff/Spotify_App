@@ -47,28 +47,44 @@ def get_favorite_tracks():
     sp = spotipy.Spotify(auth=token_info['access_token'])
     
     track_ids = []
+    tracks_info = []
+    genres_list = []
     
-    #Pega as primeiras 50 músicas
-    top_tracks_1 = sp.current_user_top_tracks(limit=50, time_range='short_term')['items']
-    track_ids += [track['id'] for track in top_tracks_1]
-    
-    #Se ja tiverem 50 músicas, pega as outras 50 para completar 100
-    if len(top_tracks_1) == 50:
-        top_tracks_2 = sp.current_user_top_tracks(limit=50, offset=50, time_range='short_term')['items']
-        track_ids += [track['id'] for track in top_tracks_2]
-    
-    top_tracks = top_tracks_1 + top_tracks_2
-    
-    
+    # Retrieve top tracks
+    for offset in range(0, 500, 50):
+        results = sp.current_user_top_tracks(limit=50, offset=offset, time_range='medium_term')
+        top_tracks = results['items']
+        if not top_tracks:
+            break
+        track_ids.extend([track['id'] for track in top_tracks])
+        tracks_info.extend(top_tracks)
+        
+        # Retrieve genres from artists of each track
+        for track in top_tracks:
+            genres = []
+            for artist in track['artists']:
+                artist_details = sp.artist(artist['id'])
+                genres.extend(artist_details['genres'])
+            genres_list.append(genres)
+
+    # Fetch audio features for all collected track IDs
     audio_features = sp.audio_features(track_ids)
+    df_audio_features = pd.DataFrame(audio_features)
+
+    # Create DataFrame for tracks info
+    df_tracks = pd.DataFrame(tracks_info)
     
-    # Create a DataFrame from the audio features
-    df = pd.DataFrame(audio_features)
+    # Simplifying the tracks DataFrame to essential info and adding genres
+    df_tracks = df_tracks[['id', 'name', 'popularity', 'album']]
+    df_tracks['genres'] = genres_list
+
+    # Merge DataFrames on 'id'
+    df_final = pd.merge(df_tracks, df_audio_features, on='id', how='left')
     
     
-    df['track_name'] = [track['name'] for track in top_tracks]
-    df['track_artist'] = [track['artists'][0]['name'] for track in top_tracks]
-    top_artists_names = df['track_artist'].value_counts().head(5)
+    df_final['track_name'] = [track['name'] for track in top_tracks]
+    df_final['track_artist'] = [track['artists'][0]['name'] for track in top_tracks]
+    top_artists_names = df_final['track_artist'].value_counts().head(5)
     
     top_artists_info = []
     for artist_name, count in top_artists_names.items():
@@ -86,7 +102,7 @@ def get_favorite_tracks():
         
     # Sai da função top_artists_df, top_artists_names e df com as informações
     
-    df.to_csv('df.csv', index=False)
+    df_final.to_csv('df.csv', index=False)
 
     # For the top artists DataFrame
     top_artists_df.to_csv('top_artist.csv', index=False)
