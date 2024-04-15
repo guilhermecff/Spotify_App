@@ -36,3 +36,7 @@ Clone the repo to your local machine:
 git clone https://github.com/yourusername/music-taste-analyzer.git
 cd music-taste-analyzer
 
+Install requirements
+
+```bash
+pip install -r requirements.txt
