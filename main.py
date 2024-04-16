@@ -29,7 +29,7 @@ def redirect_page():
     code = request.args.get('code')
     token_info = create_spotify_oauth().get_access_token(code)
     session[TOKEN_INFO] = token_info
-    return redirect(url_for('get_favorite_tracks', external=True))
+    return redirect(url_for('get_playlist_tracks', external=True))
 
 @app.route('/GetFavoriteTracks')
 def get_favorite_tracks():
@@ -78,6 +78,35 @@ def get_favorite_tracks():
     df_final.to_csv('df.csv', index=False)
 
     return "Tracks fetched and analyzed."
+
+@app.route('/get_playlist_tracks')
+def get_playlist_tracks():
+    try:
+        token_info = get_token()
+    except:
+        print('User not logged in')
+        return redirect('/')
+
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+
+    playlist_id = '6UeSakyzhiEt4NB3UAd6NQ'  
+    results = sp.playlist_tracks(playlist_id, limit=100)  # Limit to 100 tracks
+    tracks = results['items']
+
+    track_ids = [track['track']['id'] for track in tracks if track['track']]
+    tracks_info = [track['track'] for track in tracks if track['track']]
+
+    audio_features = sp.audio_features(track_ids)
+    df_audio_features = pd.DataFrame(audio_features)
+
+    df_tracks = pd.DataFrame(tracks_info)
+    df_tracks = df_tracks[['id', 'name', 'popularity', 'album']]
+    df_tracks['album'] = df_tracks['album'].apply(lambda x: x['name'])
+
+    df_final = pd.merge(df_tracks, df_audio_features, on='id', how='left')
+
+    df_final.to_csv('top_100_songs.csv', index=False)
+    return redirect(url_for('get_favorite_tracks', external=True))
 
 def get_audio_features(sp, track_ids):
     max_ids_per_request = 100
